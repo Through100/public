@@ -1,0 +1,29 @@
+---
+- name: Import newrelic-deamon systemd configuration
+  template:
+    src: systemd/newrelic-daemon.service
+    owner: root
+    group: root
+    mode: 0644
+    dest: /etc/systemd/system/newrelic-daemon.service
+  notify:
+  - reload_newrelic_daemon
+- name: Import php.d/newrelic.ini configuration
+  template:
+    src: php.d/newrelic.ini
+    owner: root
+    group: root
+    mode: 0644
+    dest: /etc/opt/remi/php80/php.d/newrelic.ini
+  notify:
+  - restart_newrelic_daemon
+
+- name: Import /etc/newrelic/newrelic.cfg configuraion
+  template:
+    src: newrelic.cfg
+    owner: root
+    group: newrelic
+    mode: 0644
+    dest: /etc/newrelic/newrelic.cfg
+  notify:
+  - restart_newrelic_daemon

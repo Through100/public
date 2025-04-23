@@ -1,0 +1,36 @@
+---
+- name: Install iptables services
+  yum :
+    name:
+    - iptables-services
+    state: latest
+  notify:
+  - Restart_iptables
+  ignore_errors: true
+- name: Disable firewalld
+  systemd:
+    name: firewalld
+    enabled: no
+    masked: yes
+    state: stopped
+  ignore_errors: true
+- name: Enable iptables
+  systemd:
+    name: iptables
+    enabled: yes
+    masked: no
+    state: started
+  notify: Restart_iptables
+  ignore_errors: true
+- name: "Install iptables table template"
+  template:
+    src: template/{{inventory_hostname}}.iptables.j2
+    dest: /etc/sysconfig/iptables
+    owner: root
+    group: root
+    mode: "0600"
+    backup: yes
+    validate: iptables-restore --test %s
+  notify:
+  - Restart_iptables
+  - Restart_fail2ban

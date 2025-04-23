@@ -1,0 +1,17 @@
+[Unit]
+Description=New Relic Daemon Service
+After=network.target
+
+[Service]
+Type=forking
+ExecStart=/usr/bin/newrelic-daemon -c /etc/newrelic/newrelic.cfg --pidfile /var/run/newrelic-daemon.pid
+ExecStop=/bin/kill -15 $MAINPID
+PIDFile=/var/run/newrelic-daemon.pid
+Restart=always
+RestartSec=5
+User=root
+Group=newrelic
+LimitNOFILE=2048
+
+[Install]
+WantedBy=multi-user.target

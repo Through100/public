@@ -1,0 +1,26 @@
+---
+- name: Create session_php80 directory
+  file: 
+    path: "{{ item }}"
+    owner: apache
+    group: php-fpm
+    mode: '0770'
+    state: directory
+  with_items:
+    - /var/opt/remi/php80/lib/php/session_php80
+
+      #- name: Minimun general setup www.conf config
+      #  template:
+      #    src: www.conf
+      #    dest: /etc/opt/remi/php80/php-fpm.d/www.conf
+      #    force: yes
+      #  notify:
+      #  - restart_php-fpm
+
+- name: Setup Server specfic php-fpm config to /etc/opt/remi/php80/php-fpm.d/  folder
+  template:
+    src: '{{ item.src }}'
+    dest: /etc/opt/remi/php80/php-fpm.d/
+  with_filetree: '../../templates/{{ host }}/'
+  notify:
+  - restart_php-fpm

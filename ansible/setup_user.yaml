@@ -1,0 +1,54 @@
+---
+# - name: Test join
+#   debug:
+#     msg: "{{ ([item.home | default(['/home/', item.name ] | join), '/.ssh'] | join) }}"
+#   with_items: "{{staff}}"
+
+- name: Create User
+  user:
+    name: "{{item.name}}"
+    home: "{{ item.home | default(['/home/', item.name ] | join) }}"
+    shell: "{{ item.shell | default('/bin/bash')}}"
+    groups: "{{ item.groups | default('item.name') }}"
+    state: present
+    append: yes
+  with_items: "{{username}}"
+  register: user
+
+- name: Clear new user's password [will have to set password on their next login]
+  command:
+    passwd -d {{ item.item.name }}
+  when: item.changed and (item.create_home is defined)
+  with_items: "{{user.results}}"
+
+- name: Expire new user's password [will have to set password on their next login]
+  command:
+    chage -d 0 {{ item.item.name }}
+  when: item.changed and (item.create_home is defined)
+  with_items: "{{user.results}}"
+
+- name: Create SSH directories
+  file:
+    path: "{{ ([item.home | default(['/home/', item.name ] | join), '/.ssh'] | join) }}"
+    owner: "{{item.name}}"
+    group: "{{item.name}}"
+    mode: "0700"
+    state: directory
+  with_items: "{{username}}"
+
+- name: Copy up SSH authorized_keys
+  copy:
+    content: "{{item.key | default('None') }}"
+    dest: "{{ ([item.home | default(['/home/', item.name ] | join), '/.ssh/authorized_keys'] | join) }}"
+    owner: "{{item.name}}"
+    group: "{{item.name}}"
+    mode: "0700"
+    force: no
+  with_items: "{{username}}"
+
+- name: Delete users
+  user:
+    name: "{{item.name}}"
+    remove: "{{ item.delete_home | default('no') }}"
+    state: absent
+  with_items: "{{deleted_username}}"

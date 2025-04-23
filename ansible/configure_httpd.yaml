@@ -1,0 +1,60 @@
+---
+- name: Create sites-available,sites-enabled directory
+  file: 
+    path: "{{ item }}"
+    owner: root
+    group: root
+    mode: '0755'
+    state: directory
+  with_items:
+    - /etc/httpd/sites-available
+    - /etc/httpd/sites-enabled
+
+- name: Commented all lines in welcome.conf
+  replace:
+    path: /etc/httpd/conf.d/welcome.conf
+    regexp: "^(?!#)(.*)$"  # Match all lines, except line start with #
+    replace: "# \\1"      
+
+- name: Add remoteip.conf config
+  template:
+    src: remoteip.conf
+    dest: /etc/httpd/conf.d/remoteip.conf
+  notify:
+  - restart_httpd      
+
+- name: Setup General httpd.conf config
+  template:
+    src: httpd.conf
+    dest: /etc/httpd/conf/httpd.conf
+  notify:
+  - restart_httpd
+
+- name: Setup Server specfic vhost config to sites-available folder
+  template:
+    src: '{{ item.src }}'
+    dest: /etc/httpd/sites-available/
+  with_filetree: '../../templates/{{ host }}/sites-available/'
+  notify:
+  - restart_httpd
+
+- name: Enabled only vhost config files set to be enabled. (Seeking...)
+  local_action:
+    module: find
+    paths: "templates/{{ host }}/sites-enabled/"
+    recurse: yes
+  register: local_template_files
+
+- name: Extract only filenames for the sites-enabled.
+  set_fact:
+    template_filenames: "{{ local_template_files.files | map(attribute='path') | map('basename') | list }}"    
+
+- name: Create symbolic links for enabled vhost config(linked from sites-available/)
+  file:
+    src: "/etc/httpd/sites-available/{{ item.path | basename }}"
+    dest: "/etc/httpd/sites-enabled/{{ item.path | basename }}"
+    state: link
+  loop: "{{ local_template_files.files }}"
+  when: local_template_files is defined
+  notify:
+  - restart_httpd  

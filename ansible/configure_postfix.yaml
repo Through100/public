@@ -1,0 +1,38 @@
+---
+- name: Update postfix configuration files with key and value 
+  lineinfile:
+    path: "/etc/postfix/{{ item.file }}"
+    regexp: '^{{ item.key }} = .*'
+    line: '{{ item.key }} = {{ item.value }}'
+    insertafter: EOF
+  with_items:
+    - "{{ main_cf.configuration }}"
+  notify:
+    - restart_postfix      
+
+- name: Update postfix configuration files with just single line
+  lineinfile:
+    path: "/etc/postfix/{{ item.file }}"
+    line: '{{ item.line }}'
+    insertafter: EOF
+  ignore_errors: yes  
+  with_items:
+    - "{{ virtual.configuration }}"      
+  notify:
+    - postmap_virtual
+  when: item.virtual.configuration is defined
+- name: Generate sasl_passwd.db upon changes to sasl_passwd file
+  copy:
+    src: sasl_passwd
+    dest: /etc/postfix/sasl_passwd
+- name: Update postfix sasl_passwd with SMTP User/password
+  lineinfile:
+    path: "/etc/postfix/{{ item.file }}"
+    regexp: '^{{ item.key }} = a.*'
+    line: '{{ item.key }}{{ item.value }}'
+    insertafter: EOF
+  with_items:
+    - "{{ sasl_passwd.configuration }}"
+  notify:
+    - update_sasl_passwd
+
